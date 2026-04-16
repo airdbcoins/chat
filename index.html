@@ -135,6 +135,16 @@ async function send(){
     }
 }
 
+/* =========================
+   ENTER TO SEND (NEW ONLY)
+   ========================= */
+document.getElementById("text").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+        e.preventDefault();
+        send();
+    }
+});
+
 setInterval(load,2000);
 </script>
 
