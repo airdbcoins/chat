@@ -1,21 +1,45 @@
-let messages = [];
+let messages = []; // ذخیره موقت در RAM
 
+const TEN_MINUTES = 10 * 60 * 1000;
+
+// پاکسازی پیام‌های قدیمی
+function cleanMessages(){
+    const now = Date.now();
+    messages = messages.filter(m => now - m.time < TEN_MINUTES);
+}
+
+// GET - گرفتن پیام‌ها
 export default function handler(req, res) {
 
-    if(req.method === 'GET'){
+    // پاکسازی قبل از هر درخواست
+    cleanMessages();
+
+    if(req.method === "GET"){
         return res.status(200).json(messages);
     }
 
-    if(req.method === 'POST'){
-        const { user, color, type, content } = req.body;
+    if(req.method === "POST"){
+        const { user, color, type, content, time } = req.body;
 
-        messages.push({
+        if(!user || !type || !content){
+            return res.status(400).json({error:"invalid data"});
+        }
+
+        const message = {
             user,
-            color,
+            color: color || "#000",
             type,
-            content
-        });
+            content,
+            time: time || Date.now()
+        };
 
-        return res.status(200).json({ ok: true });
+        messages.push(message);
+
+        // بعد از اضافه کردن هم دوباره پاکسازی
+        cleanMessages();
+
+        return res.status(200).json({success:true});
     }
+
+    return res.status(405).json({error:"method not allowed"});
 }

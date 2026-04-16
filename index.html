@@ -3,11 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <title>Mini Chat</title>
+
 <style>
 body{font-family:sans-serif;background:#f2f2f2;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
 
-.login, .chat{width:350px;background:#fff;border-radius:15px;box-shadow:0 10px 25px rgba(0,0,0,0.1);padding:15px}
-.chat{height:500px;display:none;flex-direction:column;padding:0}
+.login, .chat{
+width:350px;background:#fff;border-radius:15px;
+box-shadow:0 10px 25px rgba(0,0,0,0.1);
+padding:15px
+}
+
+.chat{
+height:500px;
+display:none;
+flex-direction:column;
+padding:0
+}
 
 .messages{flex:1;overflow:auto;padding:10px}
 .msg{margin:8px 0;padding:8px;border-radius:10px;background:#e3f2fd}
@@ -20,6 +31,7 @@ button{padding:10px;border:none;background:#4caf50;color:#fff;cursor:pointer}
 img{max-width:100%;border-radius:10px;margin-top:5px}
 </style>
 </head>
+
 <body>
 
 <!-- LOGIN -->
@@ -33,6 +45,7 @@ img{max-width:100%;border-radius:10px;margin-top:5px}
 <!-- CHAT -->
 <div class="chat" id="chatBox">
     <div class="messages" id="messages"></div>
+
     <div class="input">
         <input type="text" id="text" placeholder="پیام...">
         <input type="file" id="file">
@@ -41,16 +54,17 @@ img{max-width:100%;border-radius:10px;margin-top:5px}
 </div>
 
 <script>
-const PASSWORD = "1234"; // پسورد ثابت
 
+const PASSWORD = "1234";
 let username = "";
 let userColor = "";
 
-// رنگ تصادفی برای هر کاربر
+// رنگ رندوم
 function randomColor(){
     return "#" + Math.floor(Math.random()*16777215).toString(16);
 }
 
+// ورود
 function login(){
     let pass = document.getElementById("pass").value;
     let name = document.getElementById("name").value;
@@ -68,12 +82,16 @@ function login(){
     username = name;
     userColor = randomColor();
 
+    // ریست کامل چت در UI
+    document.getElementById("messages").innerHTML = "";
+
     document.getElementById("loginBox").style.display="none";
     document.getElementById("chatBox").style.display="flex";
 
     load();
 }
 
+// لود پیام‌ها
 async function load(){
     let res = await fetch('/api/chat');
     let data = await res.json();
@@ -81,7 +99,12 @@ async function load(){
     let box = document.getElementById('messages');
     box.innerHTML = "";
 
+    let now = Date.now();
+
     data.forEach(m=>{
+        // اگر پیام بیشتر از 10 دقیقه گذشته باشد نمایش نده
+        if(m.time && now - m.time > 10 * 60 * 1000) return;
+
         let div = document.createElement('div');
         div.className = "msg";
 
@@ -99,45 +122,49 @@ async function load(){
     box.scrollTop = box.scrollHeight;
 }
 
+// ارسال پیام
 async function send(){
     let text = document.getElementById('text').value;
     let file = document.getElementById('file').files[0];
 
+    let payload = {
+        user: username,
+        color: userColor,
+        time: Date.now()
+    };
+
     if(file){
         let reader = new FileReader();
         reader.onload = async function(){
+            payload.type = "image";
+            payload.content = reader.result;
+
             await fetch('/api/chat',{
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({
-                    user: username,
-                    color: userColor,
-                    type:'image',
-                    content: reader.result
-                })
+                body: JSON.stringify(payload)
             });
+
             load();
         };
         reader.readAsDataURL(file);
+
     }else if(text){
+        payload.type = "text";
+        payload.content = text;
+
         await fetch('/api/chat',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-                user: username,
-                color: userColor,
-                type:'text',
-                content:text
-            })
+            body: JSON.stringify(payload)
         });
+
         document.getElementById('text').value="";
         load();
     }
 }
 
-/* =========================
-   ENTER TO SEND (NEW ONLY)
-   ========================= */
+// Enter برای ارسال
 document.getElementById("text").addEventListener("keydown", function(e){
     if(e.key === "Enter"){
         e.preventDefault();
@@ -145,7 +172,9 @@ document.getElementById("text").addEventListener("keydown", function(e){
     }
 });
 
+// refresh
 setInterval(load,2000);
+
 </script>
 
 </body>
